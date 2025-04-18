@@ -18,6 +18,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Setter
 @ToString
 @Document
+
 public class Bus {
     private String id;
     private String boardNumber;
