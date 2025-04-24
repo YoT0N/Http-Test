@@ -1,0 +1,29 @@
+### GET All
+GET http://localhost:8080/api/v1/buses/
+
+### GET first one
+GET http://localhost:8080/api/v1/buses/1
+
+### DELETE third one
+DELETE http://localhost:8080/api/v1/buses/3
+
+### Create one
+POST http://localhost:8080/api/v1/buses/
+Content-Type: application/json
+
+{
+  "boardNumber": "3131 MO",
+  "code": "000009",
+  "description": "description-t"
+}
+
+### Update one
+PUT http://localhost:8080/api/v1/users/
+Content-Type: application/json
+
+{
+  "id": "2",
+  "boardNumber": "4323 AE",
+  "code": "000002",
+  "description": "description3"
+}
