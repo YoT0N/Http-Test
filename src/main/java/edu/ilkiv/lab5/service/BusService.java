@@ -24,7 +24,7 @@ public class BusService {
 
     private final BusRepository busRepository;
 
-    private List<Bus> buses = new ArrayList<>();
+    List<Bus> buses = new ArrayList<>();
     {
         buses.add(new Bus("1", "1234 CE", "000001","description1"));
         buses.add(new Bus("2", "4323 AE", "000002","description3"));

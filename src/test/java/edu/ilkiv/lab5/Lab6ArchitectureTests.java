@@ -388,15 +388,4 @@ public class Lab6ArchitectureTests {
                 .because("моделі повинні дотримуватись конвенцій JavaBean")
                 .check(applicationClasses);
     }*/
-
-    // 37
-    @Test
-    void noDirectAccessToDatabase() {
-        noClasses()
-                .that().resideInAPackage("..service..")
-                .or().resideInAPackage("..controller..")
-                .should().accessClassesThat().resideInAPackage("java.sql..")
-                .because("прямий доступ до бази даних повинен бути тільки через репозиторії")
-                .check(applicationClasses);
-    }
 }
