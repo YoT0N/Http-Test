@@ -1,5 +1,7 @@
 package edu.ilkiv.lab5.controller;
 
+import edu.ilkiv.lab5.request.BusCreateRequest;
+import edu.ilkiv.lab5.request.BusUpdateRequest;
 import edu.ilkiv.lab5.model.Bus;
 import edu.ilkiv.lab5.service.BusService;
 import lombok.RequiredArgsConstructor;
@@ -37,9 +39,21 @@ public class BusRestController {
         return busService.getById(id);
     }
 
+    //============== request =====================
+    @PostMapping("/dto")
+    public Bus insert(@RequestBody BusCreateRequest request) {
+        return busService.create(request);
+    }
+
     @PostMapping
     public Bus insert(@RequestBody Bus bus) {
         return busService.create(bus);
+    }
+
+    //============== request =====================
+    @PutMapping("/dto")
+    public Bus edit(@RequestBody BusUpdateRequest request) {
+        return busService.update(request);
     }
 
     @PutMapping

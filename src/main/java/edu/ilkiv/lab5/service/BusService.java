@@ -1,20 +1,22 @@
 package edu.ilkiv.lab5.service;
 
-
 /*
   @author Bodya
   @project lab5
   @class BusService
   version 1.0.0
-  @since 18.04.2025 - 16:40 
+  @since 18.04.2025 - 16:40
 */
 
 import edu.ilkiv.lab5.model.Bus;
 import edu.ilkiv.lab5.repository.BusRepository;
+import edu.ilkiv.lab5.request.BusCreateRequest;
+import edu.ilkiv.lab5.request.BusUpdateRequest;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,13 +47,39 @@ public class BusService {
         return busRepository.findById(id).orElse(null);
     }
 
-    public Bus create(Bus bus) {
+
+    private Bus mapToBus(BusCreateRequest request) {
+        Bus item = new Bus(request.boardNumber(), request.code(), request.description());
+        return item;
+    }
+
+    public Bus create(BusCreateRequest request) {
+        if (busRepository.existsByCode(request.code())) {
+            return null;
+        }
+        Bus item = mapToBus(request);
+        return busRepository.save(item);
+    }
+
+    public Bus create(Bus item) {
+
+        return busRepository.save(item);
+    }
+
+    public  Bus update(Bus item) {
+        return busRepository.save(item);
+    }
+
+    public Bus update(BusUpdateRequest request) {
+        Bus bus = busRepository.findById(request.id()).orElse(new Bus());
+        bus.setId(request.id());
+        bus.setBoardNumber(request.boardNumber());
+        bus.setCode(request.code());
+        bus.setDescription(request.description());
         return busRepository.save(bus);
     }
 
-    public  Bus update(Bus bus) {
-        return busRepository.save(bus);
-    }
+
 
     public void delById(String id) {
         busRepository.deleteById(id);

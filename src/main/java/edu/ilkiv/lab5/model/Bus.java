@@ -18,7 +18,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Setter
 @ToString
 @Document
-
+@Builder
 public class Bus extends AuditMetadata {
     private String id;
     private String boardNumber;

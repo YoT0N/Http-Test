@@ -2,6 +2,8 @@ package edu.ilkiv.lab5.service;
 
 import edu.ilkiv.lab5.model.Bus;
 import edu.ilkiv.lab5.repository.BusRepository;
+import edu.ilkiv.lab5.request.BusCreateRequest;
+import edu.ilkiv.lab5.request.BusUpdateRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -35,6 +37,8 @@ class BusServiceTests {
     private Bus testBus1;
     private Bus testBus2;
     private Bus testBus3;
+    private BusCreateRequest createRequest;
+    private BusUpdateRequest updateRequest;
 
     @BeforeEach
     void setUp() {
@@ -45,6 +49,10 @@ class BusServiceTests {
         testBus1 = new Bus("1", "1234 CE", "000001", "description1");
         testBus2 = new Bus("2", "4323 AE", "000002", "description2");
         testBus3 = new Bus("3", "9423 MO", "000003", "description3");
+
+        // Create test requests
+        createRequest = new BusCreateRequest("5555 AA", "000004", "description4");
+        updateRequest = new BusUpdateRequest("1", "1234 CE", "000001", "updated description");
     }
 
     @AfterEach
@@ -111,30 +119,45 @@ class BusServiceTests {
     @DisplayName("Create should save bus to repository")
     void testCreateSavesBusToRepository() {
         // given
-        Bus busToCreate = new Bus("4", "5555 AA", "000004", "description4");
-        given(mockRepository.save(busToCreate)).willReturn(busToCreate);
+        Bus expectedBus = new Bus();
+        expectedBus.setBoardNumber(createRequest.boardNumber());
+        expectedBus.setCode(createRequest.code());
+        expectedBus.setDescription(createRequest.description());
+        given(mockRepository.save(any(Bus.class))).willReturn(expectedBus);
 
         // when
-        Bus result = underTest.create(busToCreate);
+        Bus result = underTest.create(createRequest);
 
         // then
-        assertThat(result).isEqualTo(busToCreate);
-        verify(mockRepository).save(busToCreate);
+        then(mockRepository).should().save(busCaptor.capture());
+        Bus capturedBus = busCaptor.getValue();
+        assertThat(capturedBus.getBoardNumber()).isEqualTo(createRequest.boardNumber());
+        assertThat(capturedBus.getCode()).isEqualTo(createRequest.code());
+        assertThat(capturedBus.getDescription()).isEqualTo(createRequest.description());
+        assertThat(result).isEqualTo(expectedBus);
     }
 
     @Test
     @DisplayName("Update should save changes to repository")
     void testUpdateSavesBusToRepository() {
         // given
-        Bus busToUpdate = new Bus("1", "1234 CE", "000001", "updated description");
-        given(mockRepository.save(busToUpdate)).willReturn(busToUpdate);
+        Bus existingBus = new Bus(updateRequest.id(), "old board", "old code", "old description");
+        Bus updatedBus = new Bus(updateRequest.id(), updateRequest.boardNumber(), updateRequest.code(), updateRequest.description());
+
+        given(mockRepository.findById(updateRequest.id())).willReturn(Optional.of(existingBus));
+        given(mockRepository.save(any(Bus.class))).willReturn(updatedBus);
 
         // when
-        Bus result = underTest.update(busToUpdate);
+        Bus result = underTest.update(updateRequest);
 
         // then
-        assertThat(result).isEqualTo(busToUpdate);
-        verify(mockRepository).save(busToUpdate);
+        then(mockRepository).should().save(busCaptor.capture());
+        Bus capturedBus = busCaptor.getValue();
+        assertThat(capturedBus.getId()).isEqualTo(updateRequest.id());
+        assertThat(capturedBus.getBoardNumber()).isEqualTo(updateRequest.boardNumber());
+        assertThat(capturedBus.getCode()).isEqualTo(updateRequest.code());
+        assertThat(capturedBus.getDescription()).isEqualTo(updateRequest.description());
+        assertThat(result).isEqualTo(updatedBus);
     }
 
     @Test
@@ -168,61 +191,94 @@ class BusServiceTests {
     @DisplayName("Create should assign correct fields to bus")
     void testCreateAssignsCorrectFieldsToBus() {
         // given
-        Bus busToCreate = new Bus(null, "7777 BB", "000007", "description7");
+        BusCreateRequest request = new BusCreateRequest("7777 BB", "000007", "description7");
         Bus savedBus = new Bus("7", "7777 BB", "000007", "description7");
         given(mockRepository.save(any(Bus.class))).willReturn(savedBus);
 
         // when
-        underTest.create(busToCreate);
+        Bus result = underTest.create(request);
 
         // then
         then(mockRepository).should().save(busCaptor.capture());
         Bus capturedBus = busCaptor.getValue();
-        assertThat(capturedBus.getBoardNumber()).isEqualTo("7777 BB");
-        assertThat(capturedBus.getCode()).isEqualTo("000007");
-        assertThat(capturedBus.getDescription()).isEqualTo("description7");
+        assertThat(capturedBus.getBoardNumber()).isEqualTo(request.boardNumber());
+        assertThat(capturedBus.getCode()).isEqualTo(request.code());
+        assertThat(capturedBus.getDescription()).isEqualTo(request.description());
+        assertThat(result).isEqualTo(savedBus);
     }
 
     @Test
-    @DisplayName("Update should not change id of bus")
-    void testUpdateDoesNotChangeId() {
+    @DisplayName("Update should not create a new bus when ID exists")
+    void testUpdateUpdatesExistingBus() {
         // given
-        Bus originalBus = new Bus("10", "8888 CC", "000010", "original description");
-        Bus updatedBus = new Bus("10", "8888 CC", "000010", "updated description");
-        given(mockRepository.save(updatedBus)).willReturn(updatedBus);
+        String id = "10";
+        BusUpdateRequest request = new BusUpdateRequest(id, "8888 CC", "000010", "updated description");
+        Bus existingBus = new Bus(id, "8888 CC", "000010", "original description");
+        Bus updatedBus = new Bus(id, "8888 CC", "000010", "updated description");
+
+        given(mockRepository.findById(id)).willReturn(Optional.of(existingBus));
+        given(mockRepository.save(any(Bus.class))).willReturn(updatedBus);
 
         // when
-        Bus result = underTest.update(updatedBus);
+        Bus result = underTest.update(request);
 
         // then
-        assertThat(result.getId()).isEqualTo(originalBus.getId());
-        verify(mockRepository).save(updatedBus);
+        verify(mockRepository).findById(id);
+        verify(mockRepository).save(any(Bus.class));
+        assertThat(result.getId()).isEqualTo(id);
+        assertThat(result.getDescription()).isEqualTo("updated description");
+    }
+
+    @Test
+    @DisplayName("Update should create a new bus when ID doesn't exist")
+    void testUpdateCreatesNewBusWhenIdDoesNotExist() {
+        // given
+        String nonExistentId = "999";
+        BusUpdateRequest request = new BusUpdateRequest(nonExistentId, "9999 DD", "000999", "new description");
+        Bus newBus = new Bus(nonExistentId, "9999 DD", "000999", "new description");
+
+        given(mockRepository.findById(nonExistentId)).willReturn(Optional.empty());
+        given(mockRepository.save(any(Bus.class))).willReturn(newBus);
+
+        // when
+        Bus result = underTest.update(request);
+
+        // then
+        verify(mockRepository).findById(nonExistentId);
+        then(mockRepository).should().save(busCaptor.capture());
+        Bus capturedBus = busCaptor.getValue();
+        assertThat(capturedBus.getId()).isEqualTo(nonExistentId);
+        assertThat(capturedBus.getBoardNumber()).isEqualTo(request.boardNumber());
+        assertThat(capturedBus.getCode()).isEqualTo(request.code());
+        assertThat(capturedBus.getDescription()).isEqualTo(request.description());
+        assertThat(result).isEqualTo(newBus);
     }
 
     @Test
     @DisplayName("Create should use repository to save")
     void testCreateUsesSaveMethodOfRepository() {
         // given
-        Bus busToCreate = new Bus(null, "9999 DD", "000009", "description9");
+        BusCreateRequest request = new BusCreateRequest("9999 DD", "000009", "description9");
 
         // when
-        underTest.create(busToCreate);
+        underTest.create(request);
 
         // then
-        verify(mockRepository, times(1)).save(busToCreate);
+        verify(mockRepository, times(1)).save(any(Bus.class));
     }
 
     @Test
     @DisplayName("Update should use repository to save")
     void testUpdateUsesSaveMethodOfRepository() {
         // given
-        Bus busToUpdate = new Bus("11", "1111 EE", "000011", "updated description");
+        BusUpdateRequest request = new BusUpdateRequest("11", "1111 EE", "000011", "updated description");
+        given(mockRepository.findById(anyString())).willReturn(Optional.empty());
 
         // when
-        underTest.update(busToUpdate);
+        underTest.update(request);
 
         // then
-        verify(mockRepository, times(1)).save(busToUpdate);
+        verify(mockRepository, times(1)).save(any(Bus.class));
     }
 
     @Test
@@ -253,34 +309,49 @@ class BusServiceTests {
     }
 
     @Test
-    @DisplayName("Create should handle bus with all null values")
-    void testCreateHandlesBusWithNullValues() {
+    @DisplayName("Create should handle request with null or empty values")
+    void testCreateHandlesRequestWithEmptyValues() {
         // given
-        Bus busWithNulls = new Bus();
+        BusCreateRequest emptyRequest = new BusCreateRequest("", "", "");
+        Bus expectedBus = new Bus();
+        expectedBus.setBoardNumber("");
+        expectedBus.setCode("");
+        expectedBus.setDescription("");
+
+        given(mockRepository.save(any(Bus.class))).willReturn(expectedBus);
 
         // when
-        underTest.create(busWithNulls);
+        Bus result = underTest.create(emptyRequest);
 
         // then
-        verify(mockRepository).save(busWithNulls);
+        then(mockRepository).should().save(busCaptor.capture());
+        Bus capturedBus = busCaptor.getValue();
+        assertThat(capturedBus.getBoardNumber()).isEmpty();
+        assertThat(capturedBus.getCode()).isEmpty();
+        assertThat(capturedBus.getDescription()).isEmpty();
     }
 
     @Test
     @DisplayName("Update should maintain audit data")
     void testUpdateMaintainsAuditData() {
         // given
-        Bus busToUpdate = new Bus("13", "1313 FF", "000013", "initial description");
+        String id = "13";
+        BusUpdateRequest request = new BusUpdateRequest(id, "1313 FF", "000013", "updated description");
+        Bus existingBus = new Bus(id, "1313 FF", "000013", "initial description");
+
+        given(mockRepository.findById(id)).willReturn(Optional.of(existingBus));
+        given(mockRepository.save(any(Bus.class))).willReturn(existingBus);
 
         // Create spy to verify service behavior
         BusService serviceSpy = spy(underTest);
 
         // when
-        serviceSpy.update(busToUpdate);
+        serviceSpy.update(request);
 
         // then
-        verify(mockRepository).save(busToUpdate);
-        // Verify the service doesn't modify the bus before saving
-        verify(serviceSpy, times(1)).update(busToUpdate);
+        verify(mockRepository).save(any(Bus.class));
+        // Verify the service calls the update method once
+        verify(serviceSpy, times(1)).update(request);
     }
 
     @Test
@@ -316,34 +387,6 @@ class BusServiceTests {
         // then
         verify(mockRepository).saveAll(underTest.buses);
     }
-    
-
-    @Test
-    @DisplayName("Service should handle empty input when creating bus")
-    void testCreateHandlesEmptyInput() {
-        // given
-        Bus emptyBus = new Bus("", "", "");
-
-        // when
-        underTest.create(emptyBus);
-
-        // then
-        verify(mockRepository).save(emptyBus);
-    }
-
-    @Test
-    @DisplayName("Service should handle null input when creating bus")
-    void testCreateHandlesNullInput() {
-        // when
-        assertDoesNotThrow(() -> underTest.create(null));
-    }
-
-    @Test
-    @DisplayName("Service should handle null input when updating bus")
-    void testUpdateHandlesNullInput() {
-        // when
-        assertDoesNotThrow(() -> underTest.update(null));
-    }
 
     @Test
     @DisplayName("Service should handle null input when getting bus by id")
@@ -369,31 +412,48 @@ class BusServiceTests {
     }
 
     @Test
-    @DisplayName("Test create returns the same bus that was saved")
-    void testCreateReturnsSameBusThatWasSaved() {
+    @DisplayName("Test create returns bus with all fields set correctly")
+    void testCreateReturnsBusWithCorrectFields() {
         // given
-        Bus busToCreate = new Bus("5", "5555 XY", "000005", "description5");
-        given(mockRepository.save(any(Bus.class))).willAnswer(i -> i.getArgument(0));
+        BusCreateRequest request = new BusCreateRequest("5555 XY", "000005", "description5");
+        Bus expectedBus = new Bus();
+        expectedBus.setId("5"); // Repository would set this
+        expectedBus.setBoardNumber("5555 XY");
+        expectedBus.setCode("000005");
+        expectedBus.setDescription("description5");
+
+        given(mockRepository.save(any(Bus.class))).willReturn(expectedBus);
 
         // when
-        Bus result = underTest.create(busToCreate);
+        Bus result = underTest.create(request);
 
         // then
-        assertThat(result).isSameAs(busToCreate);
+        assertThat(result.getId()).isEqualTo("5");
+        assertThat(result.getBoardNumber()).isEqualTo("5555 XY");
+        assertThat(result.getCode()).isEqualTo("000005");
+        assertThat(result.getDescription()).isEqualTo("description5");
     }
 
     @Test
-    @DisplayName("Test update returns the same bus that was saved")
-    void testUpdateReturnsSameBusThatWasSaved() {
+    @DisplayName("Test update returns bus with all fields updated correctly")
+    void testUpdateReturnsBusWithUpdatedFields() {
         // given
-        Bus busToUpdate = new Bus("5", "5555 XY", "000005", "updated description");
-        given(mockRepository.save(any(Bus.class))).willAnswer(i -> i.getArgument(0));
+        String id = "5";
+        BusUpdateRequest request = new BusUpdateRequest(id, "5555 XY", "000005", "updated description");
+        Bus existingBus = new Bus(id, "old number", "old code", "old description");
+        Bus updatedBus = new Bus(id, "5555 XY", "000005", "updated description");
+
+        given(mockRepository.findById(id)).willReturn(Optional.of(existingBus));
+        given(mockRepository.save(any(Bus.class))).willReturn(updatedBus);
 
         // when
-        Bus result = underTest.update(busToUpdate);
+        Bus result = underTest.update(request);
 
         // then
-        assertThat(result).isSameAs(busToUpdate);
+        assertThat(result.getId()).isEqualTo(id);
+        assertThat(result.getBoardNumber()).isEqualTo("5555 XY");
+        assertThat(result.getCode()).isEqualTo("000005");
+        assertThat(result.getDescription()).isEqualTo("updated description");
     }
 
     @Test

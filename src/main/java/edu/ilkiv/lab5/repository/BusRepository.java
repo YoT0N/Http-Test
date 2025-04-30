@@ -14,4 +14,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface BusRepository extends MongoRepository<Bus, String> {
+    boolean existsByCode(String code);
 }
